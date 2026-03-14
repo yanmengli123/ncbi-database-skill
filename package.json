@@ -1,6 +1,6 @@
 {
   "name": "ncbi-database-skill",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Comprehensive NCBI Database CLI tool for querying E-utilities API - Gene, PubMed, ClinVar, SRA, BLAST, and more",
   "main": "src/index.js",
   "bin": {
