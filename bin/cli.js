@@ -197,9 +197,9 @@ ${Object.entries(COMMANDS).map(([name, cmd]) => {
  */
 function parseCommandArgs(args) {
   const options = {
-    delay: { type: 'string', default: '100' },
+    delay: { type: 'string', default: '10' },
     output: { type: 'string', short: 'o', default: 'json' },
-    apikey: { type: 'string', short: 'k', default: '' },
+    apikey: { type: 'string', short: 'k', default: '575e2aeaed9e26ef0b459ede963e2164c109' },
     verbose: { type: 'boolean', short: 'v', default: false },
     help: { type: 'boolean', short: 'h', default: false },
     format: { type: 'string', short: 'f', default: 'json' },
@@ -210,7 +210,7 @@ function parseCommandArgs(args) {
     db: { type: 'string', default: 'gene' },
     ids: { type: 'string', default: '' },
     linkeddb: { type: 'string', default: '' },
-    email: { type: 'string', short: 'e', default: '' },
+    email: { type: 'string', short: 'e', default: '3211058611@qq.com' },
     
     assembly: { type: 'string', default: '' },
     summary: { type: 'boolean', default: false },
@@ -239,7 +239,7 @@ function parseCommandArgs(args) {
  */
 async function handleSearch(parsed) {
   const { options, positionals } = parsed;
-  const db = options.db || positionals[0] || 'gene';
+  const db = positionals[0] || options.db || 'gene';
   const term = options.term || positionals.slice(1).join(' ') || '';
   
   if (!term) {
@@ -276,7 +276,7 @@ async function handleSearch(parsed) {
  */
 async function handleFetch(parsed) {
   const { options, positionals } = parsed;
-  const db = options.db || positionals[0] || 'gene';
+  const db = positionals[0] || options.db || 'gene';
   const ids = options.ids || positionals[1] || '';
   
   if (!ids) {
@@ -316,7 +316,7 @@ async function handleFetch(parsed) {
  */
 async function handleSummary(parsed) {
   const { options, positionals } = parsed;
-  const db = options.db || positionals[0] || 'gene';
+  const db = positionals[0] || options.db || 'gene';
   const ids = options.ids || positionals[1] || '';
   
   if (!ids) {
@@ -346,8 +346,8 @@ async function handleSummary(parsed) {
  * 执行链接命令
  */
 async function handleLink(parsed) {
-  const { options, positionals } = parseCommandArgs(process.argv.slice(3));
-  const sourceDb = options.db || positionals[0] || 'gene';
+  const { options, positionals } = parsed;
+  const sourceDb = positionals[0] || options.db || 'gene';
   const ids = options.ids || positionals[1] || '';
   const linkedDb = options.linkeddb || positionals[2] || '';
   
@@ -380,7 +380,7 @@ async function handleLink(parsed) {
  */
 async function handleInfo(parsed) {
   const { options, positionals } = parsed;
-  const db = options.db || positionals[0] || 'gene';
+  const db = positionals[0] || options.db || 'gene';
 
   try {
     if (options.verbose) console.log(`获取数据库信息: ${db}`);

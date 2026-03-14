@@ -30,7 +30,7 @@
   "author": "Your Name <your.email@example.com>",
   "license": "MIT",
   "dependencies": {
-    "axios": "^1.6.0"
+    "axios": "^1.13.6"
   },
   "engines": {
     "node": ">=14.0.0"
@@ -40,7 +40,6 @@
     "type": "git",
     "url": "git+https://github.com/username/ncbi-database-skill.git"
   },
-  "devDependencies": {},
   "bugs": {
     "url": "https://github.com/username/ncbi-database-skill/issues"
   },
