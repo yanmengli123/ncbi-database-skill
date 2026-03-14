@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 
 import { parseArgs } from 'node:util';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import { NCBIClient } from '../src/ncbi-client.js';
 import { 
   NCBIError, 
@@ -14,6 +17,39 @@ import {
 } from '../src/errors.js';
 
 const client = new NCBIClient();
+
+// 配置文件路径
+const CONFIG_FILE = join(homedir(), '.ncbi-config.json');
+
+// 默认配置
+const DEFAULT_CONFIG = {
+  apikey: '575e2aeaed9e26ef0b459ede963e2164c109',
+  email: '3211058611@qq.com',
+  delay: '10'
+};
+
+// 读取配置
+function loadConfig() {
+  try {
+    if (existsSync(CONFIG_FILE)) {
+      const data = readFileSync(CONFIG_FILE, 'utf-8');
+      return { ...DEFAULT_CONFIG, ...JSON.parse(data) };
+    }
+  } catch (e) {
+    // 忽略错误，使用默认配置
+  }
+  return { ...DEFAULT_CONFIG };
+}
+
+// 保存配置
+function saveConfig(config) {
+  writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+}
+
+// 初始化配置
+const config = loadConfig();
+client.setApiKey(config.apikey);
+client.setDelay(parseInt(config.delay));
 
 const COMMANDS = {
   // 搜索命令
@@ -166,8 +202,9 @@ ${Object.entries(COMMANDS).map(([name, cmd]) => {
   }).join('\n')}
 
 全局选项:
-  -d, --delay <ms>      请求间隔毫秒数 (默认: 100ms, 有API key可用10ms)
+  -d, --delay <ms>      请求间隔毫秒数 (默认: 10ms)
   -o, --output <format>  输出格式: json, xml, text (默认: json)
+  -O, --outputFile <file> 输出到文件
   -k, --apikey <key>   NCBI API Key
   -h, --help            显示帮助信息
   -v, --verbose         详细输出模式
@@ -193,12 +230,34 @@ ${Object.entries(COMMANDS).map(([name, cmd]) => {
 }
 
 /**
+ * 输出结果到文件或控制台
+ */
+function outputResult(data, options) {
+  const outputFormat = options.output || 'json';
+  let outputText;
+
+  if (outputFormat === 'json') {
+    outputText = JSON.stringify(data, null, 2);
+  } else {
+    outputText = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+  }
+
+  if (options.outputFile) {
+    writeFileSync(options.outputFile, outputText);
+    console.log(`✅ 结果已保存到: ${options.outputFile}`);
+  } else {
+    console.log(outputText);
+  }
+}
+
+/**
  * 解析命令行参数
  */
 function parseCommandArgs(args) {
   const options = {
     delay: { type: 'string', default: '10' },
     output: { type: 'string', short: 'o', default: 'json' },
+    outputFile: { type: 'string', short: 'O', default: '' },
     apikey: { type: 'string', short: 'k', default: '575e2aeaed9e26ef0b459ede963e2164c109' },
     verbose: { type: 'boolean', short: 'v', default: false },
     help: { type: 'boolean', short: 'h', default: false },
@@ -260,7 +319,11 @@ async function handleSearch(parsed) {
       delay: parseInt(options.delay)
     });
 
-    console.log(JSON.stringify(result, null, 2));
+    if (options.outputFile) {
+      outputResult(result, options);
+    } else {
+      console.log(JSON.stringify(result, null, 2));
+    }
   } catch (e) {
     const errorInfo = parseNcbiError(e);
     console.error(`Search failed: ${errorInfo.message}`);
@@ -297,7 +360,11 @@ async function handleFetch(parsed) {
     });
 
     if (options.output === 'json') {
+      if (options.outputFile) {
+      outputResult(result, options);
+    } else {
       console.log(JSON.stringify(result, null, 2));
+    }
     } else {
       console.log(result);
     }
@@ -335,7 +402,11 @@ async function handleSummary(parsed) {
       delay: parseInt(options.delay)
     });
 
-    console.log(JSON.stringify(result, null, 2));
+    if (options.outputFile) {
+      outputResult(result, options);
+    } else {
+      console.log(JSON.stringify(result, null, 2));
+    }
   } catch (e) {
     console.error(`获取摘要失败: ${e.message}`);
     process.exit(1);
@@ -368,7 +439,11 @@ async function handleLink(parsed) {
       delay: parseInt(options.delay)
     });
 
-    console.log(JSON.stringify(result, null, 2));
+    if (options.outputFile) {
+      outputResult(result, options);
+    } else {
+      console.log(JSON.stringify(result, null, 2));
+    }
   } catch (e) {
     console.error(`链接查询失败: ${e.message}`);
     process.exit(1);
@@ -390,7 +465,11 @@ async function handleInfo(parsed) {
       apikey: options.apikey
     });
 
-    console.log(JSON.stringify(result, null, 2));
+    if (options.outputFile) {
+      outputResult(result, options);
+    } else {
+      console.log(JSON.stringify(result, null, 2));
+    }
   } catch (e) {
     console.error(`获取信息失败: ${e.message}`);
     process.exit(1);
@@ -412,7 +491,11 @@ async function handleAssembly(parsed) {
     
     const result = await client.resolveAssembly(assemblyName);
 
-    console.log(JSON.stringify(result, null, 2));
+    if (options.outputFile) {
+      outputResult(result, options);
+    } else {
+      console.log(JSON.stringify(result, null, 2));
+    }
   } catch (e) {
     const errorInfo = parseNcbiError(e);
     console.error(`Assembly lookup failed: ${errorInfo.message}`);
@@ -438,7 +521,11 @@ async function handleGenePanorama(parsed) {
     
     const result = await client.getGenePanorama(geneIdOrSymbol);
 
-    console.log(JSON.stringify(result, null, 2));
+    if (options.outputFile) {
+      outputResult(result, options);
+    } else {
+      console.log(JSON.stringify(result, null, 2));
+    }
   } catch (e) {
     const errorInfo = parseNcbiError(e);
     console.error(`Gene panorama failed: ${errorInfo.message}`);
@@ -464,7 +551,11 @@ async function handleVariant(parsed) {
     
     const result = await client.getVariantInfo(variantInput);
 
-    console.log(JSON.stringify(result, null, 2));
+    if (options.outputFile) {
+      outputResult(result, options);
+    } else {
+      console.log(JSON.stringify(result, null, 2));
+    }
   } catch (e) {
     const errorInfo = parseNcbiError(e);
     console.error(`Variant lookup failed: ${errorInfo.message}`);
@@ -496,7 +587,11 @@ async function handleBlast(parsed) {
       megablast: options.program === 'megablast'
     });
 
-    console.log(JSON.stringify(result, null, 2));
+    if (options.outputFile) {
+      outputResult(result, options);
+    } else {
+      console.log(JSON.stringify(result, null, 2));
+    }
   } catch (e) {
     const errorInfo = parseNcbiError(e);
     console.error(`BLAST search failed: ${errorInfo.message}`);
@@ -522,7 +617,11 @@ async function handleSRA(parsed) {
     
     const result = await client.getSRAInfo(sraInput);
 
-    console.log(JSON.stringify(result, null, 2));
+    if (options.outputFile) {
+      outputResult(result, options);
+    } else {
+      console.log(JSON.stringify(result, null, 2));
+    }
   } catch (e) {
     const errorInfo = parseNcbiError(e);
     console.error(`SRA lookup failed: ${errorInfo.message}`);
@@ -548,7 +647,11 @@ async function handleEspell(parsed) {
     
     const result = await client.espell({ term, retmode: 'json' });
 
-    console.log(JSON.stringify(result, null, 2));
+    if (options.outputFile) {
+      outputResult(result, options);
+    } else {
+      console.log(JSON.stringify(result, null, 2));
+    }
   } catch (e) {
     const errorInfo = parseNcbiError(e);
     console.error(`Spell check failed: ${errorInfo.message}`);
@@ -574,7 +677,11 @@ async function handleEcitmatch(parsed) {
     
     const result = await client.ecitmatch({ citations: [citation] });
 
-    console.log(JSON.stringify(result, null, 2));
+    if (options.outputFile) {
+      outputResult(result, options);
+    } else {
+      console.log(JSON.stringify(result, null, 2));
+    }
   } catch (e) {
     const errorInfo = parseNcbiError(e);
     console.error(`Citation matching failed: ${errorInfo.message}`);
@@ -582,6 +689,61 @@ async function handleEcitmatch(parsed) {
       console.error(`Hint: ${errorInfo.suggestion}`);
     }
     process.exit(1);
+  }
+}
+
+/**
+ * 执行配置命令
+ */
+function handleConfig(parsed) {
+  const { positionals } = parsed;
+  const subcommand = positionals[0] || 'show';
+  const key = positionals[1];
+  const value = positionals[2];
+
+  switch (subcommand) {
+    case 'show':
+    case '':
+      console.log('🔧 当前配置:');
+      console.log(`  API Key: ${config.apikey ? config.apikey.substring(0, 10) + '...' : '(未设置)'}`);
+      console.log(`  Email: ${config.email || '(未设置)'}`);
+      console.log(`  延迟: ${config.delay}ms`);
+      console.log(`\n配置文件: ${CONFIG_FILE}`);
+      break;
+
+    case 'set':
+      if (!key || !value) {
+        console.error('用法: ncbi config set <key> <value>');
+        console.error('示例: ncbi config set delay 50');
+        process.exit(1);
+      }
+      if (key === 'apikey' || key === 'email' || key === 'delay') {
+        config[key] = value;
+        saveConfig(config);
+
+        // 立即生效
+        if (key === 'apikey') client.setApiKey(value);
+        if (key === 'delay') client.setDelay(parseInt(value));
+
+        console.log(`✅ 已设置 ${key} = ${value}`);
+      } else {
+        console.error(`未知配置项: ${key}`);
+        console.error('可用项: apikey, email, delay');
+        process.exit(1);
+      }
+      break;
+
+    case 'reset':
+      saveConfig(DEFAULT_CONFIG);
+      client.setApiKey(DEFAULT_CONFIG.apikey);
+      client.setDelay(parseInt(DEFAULT_CONFIG.delay));
+      console.log('✅ 配置已重置为默认值');
+      break;
+
+    default:
+      console.error(`未知子命令: ${subcommand}`);
+      console.error('用法: ncbi config [show|set|reset]');
+      process.exit(1);
   }
 }
 
@@ -645,7 +807,7 @@ async function main() {
       
     case 'config':
     case 'cfg':
-      console.log('配置功能待实现');
+      handleConfig(parsed);
       break;
       
     case 'assembly':
